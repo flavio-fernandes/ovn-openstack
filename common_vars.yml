@@ -1,0 +1,11 @@
+---
+# for common_vars.yml
+
+devstack_repository: http://git.openstack.org/openstack-dev/devstack.git
+devstack_repo_version: master
+
+real_networking_ovn_repository: http://git.openstack.org/openstack/networking-ovn.git 
+real_networking_ovn_repo_version: master
+
+networking_ovn_repository: https://github.com/flavio-fernandes/networking-ovn.git
+networking_ovn_repo_version: devel
