@@ -4,7 +4,7 @@
      - "common_vars.yml"
   tasks:
      - name: install devstack pre-reqs and wireshark
-       sudo: true
+       become: true
        apt: name={{item}} state=present
        with_items:
        - git
