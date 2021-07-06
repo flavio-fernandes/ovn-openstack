@@ -1,24 +1,43 @@
-ovn-openstack
-=============
+# Devstack with OVN backend in Neutron
 
-This repo provides an automated way of creating a multi-node devstack
-environment with networking-ovn. I mainly use this as a starting point
-for whatever I need to get going.
+This directory contains vagrant file and shell script which can be used to
+spawn a devstack based topology with Neutron using OVN backend driver.
 
-Howto
------
+This is a simpler version of what Daniel and Slaweq used during the
+[OpenInfra Summit workshop](https://github.com/danalsan/vagrants/tree/master/devstack-workshop)
+in Octbober 2020.
 
-* tweak file Vagrantfile to taste. If you need to use nondefault
-number of compute nodes, you can also set the env variable
-$DEVSTACK_NUM_COMPUTE_NODES
+## Preparation of environment
 
-* tweak file common_vars.yml . Most likely you want to use
-your own networking_ovn_repository .
+To prepare this environment You need to have installed:
 
-* vagrant up
+* [Vagrant](https://www.vagrantup.com/downloads)
+* [Libvirt](https://libvirt.org/downloads.html) or [Virtualbox](https://www.virtualbox.org/)
+* [Vagrant Libvirt Provider](https://github.com/vagrant-libvirt/vagrant-libvirt) (if using libvirt)
 
-* connect to each vm via 'vagrant ssh' and tweak /home/vagrant/devstack/local.conf .
-For convenience sake, I lazily keep the tweaked files in /vagrant/junk/ directory,
-but that is not something I'm proud of. :)
+If you need more info on having Vagrant with libvirt, take a look at [this link](http://www.flaviof.com/blog2/post/hacks/vagrant-libvirt/).
 
-* from ssh session in each node, invoke:  cd ~/devstack && time ./stack.sh
+## Installation
+
+* Clone this repo and enter the created directory:
+
+```
+$ git clone https://github.com/flavio-fernandes/ovn-openstack.git && cd ovn-openstack
+```
+
+* Run vagrant:
+
+```
+$ vagrant up
+```
+
+* Once the configuration step is done you can SSH into the nodes and start
+  playing with OVN:
+
+```
+$ vagrant status
+$ vagrant ssh central
+$ sudo ovn-nbctl show
+$ sudo ovn-sbctl list Chassis
+```
+

@@ -1,64 +1,54 @@
-# -*- mode: ruby -*-
-# vi: set ft=ruby :
+IPS = {central:   '192.168.150.100',
+       central_2: '172.24.4.100',
+      }
 
-# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
-VAGRANTFILE_API_VERSION = "2"
+RAM = 8000
+VCPUS = 4
 
-Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+Vagrant.configure(2) do |config|
 
-  num_compute_nodes = (ENV['DEVSTACK_NUM_COMPUTE_NODES'] || 2).to_i
+    vm_memory = ENV['VM_MEMORY'] || RAM
+    vm_cpus = ENV['VM_CPUS'] || VCPUS
 
-  # ip configuration
-  control_ip = "192.168.50.30"
-  compute_ip_base = "192.168.50."
-  compute_ips = num_compute_nodes.times.collect { |n| compute_ip_base + "#{n+31}" }
-
-  # Devstack Controller
-  config.vm.define "devstack-control", primary: true do |control|
-    control.vm.box = "ubuntu/trusty64"
-    control.vm.hostname = "devstack-control"
-    config.vm.provision "ansible" do |ansible|
-        ansible.playbook = "playbook.yml"
+    config.vm.provider 'libvirt' do |lb|
+        lb.nested = true
+        lb.memory = vm_memory
+        lb.cpus = vm_cpus
+        lb.suspend_mode = 'managedsave'
+        lb.storage_pool_name = 'default'
+        lb.qemu_use_session = false
     end
-    #control.vm.network "public_network", ip: "#{control_ip}", bridge: "tap1"
-    control.vm.network "private_network", ip: "#{control_ip}", auto_config: true
-    control.vm.network "private_network", ip: "0.0.0.0", virtualbox__intnet: "mylocalnet", auto_config: false
-    control.vm.provider :virtualbox do |vb|
-      # vb.gui = true
-      vb.customize ["modifyvm", :id, "--memory", "8192"]
-      vb.customize ["modifyvm", :id, "--nictype1", "virtio"]
-      vb.customize ["modifyvm", :id, "--nictype2", "virtio"]
-      vb.customize ["modifyvm", :id, "--nictype3", "virtio"]
-      vb.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
-      vb.customize ["modifyvm", :id, "--nicpromisc3", "allow-all"]
-      # vb.customize ["modifyvm", :id, "--cableconnected3", "off"]
-    end
-  end
 
-  # Devstack Compute Nodes
-  num_compute_nodes.times do |n|
-    config.vm.define "devstack-compute-#{n+1}", autostart: true do |compute|
-      compute_ip = compute_ips[n]
-      compute_index = n+1
-
-      compute.vm.box = "ubuntu/trusty64"
-      compute.vm.hostname = "devstack-compute-#{compute_index}"
-      config.vm.provision "ansible" do |ansible|
-          ansible.playbook = "playbook.yml"
-      end
-      #compute.vm.network "public_network", ip: "#{compute_ip}", bridge: "tap1"
-      compute.vm.network "private_network", ip: "#{compute_ip}", auto_config: true
-      compute.vm.network "private_network", ip: "0.0.0.0", virtualbox__intnet: "mylocalnet", auto_config: false
-      compute.vm.provider :virtualbox do |vb|
-        # vb.gui = true
-        vb.customize ["modifyvm", :id, "--memory", "8192"]
+    # VirtualBox specific configuration
+    config.vm.provider "virtualbox" do |vb|
+        vb.memory = vm_memory
+        vb.cpus = vm_cpus
+        vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
         vb.customize ["modifyvm", :id, "--nictype1", "virtio"]
         vb.customize ["modifyvm", :id, "--nictype2", "virtio"]
         vb.customize ["modifyvm", :id, "--nictype3", "virtio"]
-        vb.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
-        vb.customize ["modifyvm", :id, "--nicpromisc3", "allow-all"]
-        # vb.customize ["modifyvm", :id, "--cableconnected3", "off"]
-      end
+        vb.customize [
+           "guestproperty", "set", :id,
+           "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 10000]
     end
-  end
+
+    config.ssh.forward_agent = true
+    config.vm.hostname = "ovnhost"
+    config.vm.box = "generic/ubuntu2004"
+#    config.vm.box = "centos/8"
+    config.vm.synced_folder './', '/vagrant', type: 'rsync'
+
+     # central as controller node (northd/southd)
+    config.vm.define 'central', primary: true, autostart: true do |central|
+        central.vm.network 'private_network', ip: IPS[:central]
+        central.vm.network 'private_network', ip: IPS[:central_2], auto_config: false,
+                           :libvirt__dhcp_enabled => "no"
+        central.vm.hostname = 'central'
+        central.vm.provision :shell do |shell|
+            shell.privileged = false
+            shell.path = 'central.sh'
+            shell.env = IPS
+        end
+    end
+
 end
