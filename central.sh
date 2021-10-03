@@ -20,6 +20,7 @@ function install_devstack {
     ubuntu_setup
 
     cd
+    export GIT_SSL_NO_VERIFY=1  ; # to avoid messing with certificates
     git clone --depth 1 --no-single-branch https://opendev.org/openstack/neutron.git
     git clone --depth 1 --no-single-branch https://opendev.org/openstack/devstack.git 
 
